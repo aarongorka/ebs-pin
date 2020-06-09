@@ -1,8 +1,8 @@
 import sys
 import logging
+import botocore
 import boto3
 import ebspin.ec2 as ec2
-
 
 class Base:
     options = None
@@ -71,10 +71,21 @@ class Base:
         if len(volumes) > 0:
             for volume_id in volumes:
                 logging.info("Creating snapshot for volume %s" % volume_id)
-                if self.ec2.create_snapshot(volume_id, self.options.tags):
-                    logging.info("Volume %s snapshot created." % volume_id)
-                else:
-                    logging.error("Volume %s snapshot failed." % volume_id)
+                response = self.ec2.create_snapshot(volume_id, self.options.tags)
+                snapshot_id = response["SnapshotId"]
+                snapshot_complete_waiter = self.get_waiter('snapshot_completed')
+                try
+                    snapshot_complete_waiter.wait(SnapshotIds=[snapshot_id])
+                    if self.ec2.create_snapshot(volume_id, self.options.tags):
+                        logging.info("Volume %s snapshot created." % volume_id)
+                    else:
+                        logging.error("Volume %s snapshot failed." % volume_id)
+
+                except botocore.exceptions.WaiterError as e:
+                    if "Max attempts exceeded" in e.message
+                        logging.info("Snapshot did not complete in 600 seconds for volume %s." % volume_id)
+                    else
+                        logging.info("Snapshot did not complete with error %s." % e.message)
         else:
             logging.info("No volumes found")
 
