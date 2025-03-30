@@ -5,17 +5,18 @@ class Configuration:
     def metadata(self):
         headers = {}
         try:
-            r = requests.get(
+            r = requests.put(
                 "http://169.254.169.254/latest/api/token",
-                headers={"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
+                headers={"X-aws-ec2-metadata-token-ttl-seconds": "1800"},
                 timeout=1,
             )
             token = r.text
             headers = {"X-aws-ec2-metadata-token": token}
             r.raise_for_status()
         except Exception:
-            logger.warning(
-                "Couldn't get IMDSv2 token, attempting to get instance ID without it..."
+            logging.warning(
+                "Couldn't get IMDSv2 (%s) token, attempting to get instance ID without it...",
+                r.text,
             )
             pass
 
